@@ -13,7 +13,7 @@ func main() {
 		panic(err)
 	}
 	ctx := context.Background()
-	t.On(
+	t.Handle(
 		new(myHandler),
 		ticker.NewGCHandler(time.Minute),
 	)

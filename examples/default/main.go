@@ -7,17 +7,17 @@ import (
 	"time"
 )
 
-const fiveSecond = 5 * time.Second
+const oneMinute = time.Minute
 
 func main() {
-	tick, err := ticker.Every(fiveSecond)
+	tick, err := ticker.Every(oneMinute, ticker.WaitNextLoop())
 	if err != nil {
 		panic(err)
 	}
 	ctx := context.Background()
-	tick.On(new(myHandler))
+	tick.Handle(new(myHandler))
 	tick.Start(ctx)
-	<-time.After(3 * time.Minute)
+	<-time.After(15 * time.Minute)
 	tick.Stop()
 }
 

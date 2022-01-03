@@ -10,41 +10,65 @@ import (
 
 type Ticker struct {
 	closed   uint32
+	running  uint32
 	wg       sync.WaitGroup
 	ticker   *time.Ticker
 	interval time.Duration
 	handlers []Handler
+	wnl      bool // wait next loop
 }
 
-func Every(interval time.Duration) (*Ticker, error) {
+type Option func(t *Ticker)
+
+func WaitNextLoop() Option {
+	return func(t *Ticker) {
+		t.wnl = true
+	}
+}
+
+func Every(interval time.Duration, opts ...Option) (*Ticker, error) {
 	if interval.Seconds() < 1 {
 		return nil, fmt.Errorf("ticker: interval must be greater or equal than one second")
 	}
-	return &Ticker{
+	tick := &Ticker{
 		interval: interval,
-	}, nil
+	}
+	for _, f := range opts {
+		f(tick)
+	}
+	return tick, nil
 }
 
-func (t *Ticker) On(handlers ...Handler) {
+func (t *Ticker) Handle(handler Handler, handlers ...Handler) {
+	if running := atomic.LoadUint32(&t.running); running > 0 {
+		return
+	}
+	t.handlers = append(t.handlers, handler)
 	t.handlers = append(t.handlers, handlers...)
 }
 
 func (t *Ticker) Stop() {
+	if closed := atomic.LoadUint32(&t.closed); closed > 0 {
+		return
+	}
 	atomic.StoreUint32(&t.closed, 1)
 	t.wg.Wait()
 }
 
 func (t *Ticker) Start(ctx context.Context) {
-	isClosed := atomic.LoadUint32(&t.closed)
-	if isClosed > 0 {
+	if closed := atomic.LoadUint32(&t.closed); closed > 0 {
 		return
 	}
+	if running := atomic.LoadUint32(&t.running); running > 0 {
+		return
+	}
+	atomic.AddUint32(&t.running, 1)
 	t.wg.Add(1)
 	go t.runLoop(ctx)
 }
 
 func (t *Ticker) waitNextLoop() {
-	if t.interval < time.Minute {
+	if t.interval < time.Minute || !t.wnl {
 		return
 	}
 	t1 := time.Now().Add(t.interval).Truncate(t.interval).Round(t.interval).Unix()

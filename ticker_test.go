@@ -39,6 +39,26 @@ func TestNewInterval(t *testing.T) {
 	}
 }
 
+func TestEmptyHandler_StartManyTimes(t *testing.T) {
+	tick, err := Every(time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	handler := &testHandler{}
+	tick.Handle(handler)
+	tick.Start(ctx)
+	tick.Start(ctx)
+	<-time.After(3 * time.Second)
+	tick.Stop()
+	if have, want := atomic.LoadUint64(&handler.handlerCnt), uint64(3); have != want {
+		t.Fatalf("have %d, want %d", have, want)
+	}
+	if have, want := atomic.LoadUint64(&handler.afterStopCnt), uint64(1); have != want {
+		t.Fatalf("have %d, want %d", have, want)
+	}
+}
+
 func TestTicker_Handle(t *testing.T) {
 	ticker, err := Every(time.Second)
 	if err != nil {
@@ -46,7 +66,7 @@ func TestTicker_Handle(t *testing.T) {
 	}
 	want := 3
 	handler := &testHandler{}
-	ticker.On(handler)
+	ticker.Handle(handler)
 	ticker.Start(context.Background())
 	<-time.After(time.Duration(want) * time.Second)
 	ticker.Stop()
