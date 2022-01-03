@@ -107,16 +107,15 @@ func (t *Ticker) runLoop(ctx context.Context) {
 			if isClosed > 0 {
 				return
 			}
-			tick0 := time.Now()
 			tick := time.Now()
 			timePoint := tick.Truncate(t.interval).Round(t.interval)
 			next := tick.Unix() == timePoint.Unix() && firstRun || (firstRun && since > t.interval.Seconds())
 			for i := 0; i < len(t.handlers); i++ {
-				t.handlers[i].Tick(ctx, tick0, next)
+				t.handlers[i].Tick(ctx, tick, next)
 			}
 			if next || !firstRun {
 				for i := 0; i < len(t.handlers); i++ {
-					t.handlers[i].Handle(ctx, tick0, timePoint)
+					t.handlers[i].Handle(ctx, tick, timePoint)
 				}
 				since = time.Since(tick).Seconds()
 				firstRun = true
