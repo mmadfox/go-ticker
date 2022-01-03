@@ -1,6 +1,3 @@
-# go-ticker
-
-```go
 package main
 
 import (
@@ -42,4 +39,3 @@ func (h *myHandler) Tick(_ context.Context, tick time.Time, next bool) {
 func (h *myHandler) AfterStop(_ context.Context) {
 	fmt.Println("afterStop")
 }
-```
